@@ -35,9 +35,15 @@ namespace GoDaddy.PublicSuffixData.Internal
                 using (var streamReader = new StreamReader(stream))
                 using (var reader = new JsonTextReader(streamReader))
                 {
+                    var rootObject = serializer.Deserialize<JObject>(reader);
+                    if (rootObject == null)
+                    {
+                        throw new ApplicationException("Invalid data in cache");
+                    }
+
                     return new DomainSegmentTree
                     {
-                        Children = ConvertFromJsonRecursive(serializer.Deserialize<JObject>(reader))
+                        Children = ConvertFromJsonRecursive(rootObject)
                     };
                 }
             });
@@ -62,7 +68,8 @@ namespace GoDaddy.PublicSuffixData.Internal
                 using (var stream = _fileSystem.OpenWrite(_config.CacheFilePath))
                 using (var writer = new StreamWriter(stream))
                 {
-                    serializer.Serialize(writer, ConvertToJsonRecursive(data));
+                    var json = ConvertToJsonRecursive(data);
+                    serializer.Serialize(writer, json);
                 }
             });
         }
