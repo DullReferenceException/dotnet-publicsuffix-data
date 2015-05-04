@@ -10,10 +10,14 @@ namespace GoDaddy.PublicSuffixData
     {
         private readonly IPublicSuffixDataSource _dataSource;
 
-        public PublicSuffixDataStore()
+        public PublicSuffixDataStore() : this(
+            ConfigurationManager.GetSection("goDaddy.publicSuffixData") as IPublicSuffixConfig 
+            ?? new DefaultConfig())
         {
-            var config = (ConfigurationManager.GetSection("goDaddy.publicSuffixData") as IPublicSuffixConfig)
-                ?? new DefaultConfig();
+        }
+
+        public PublicSuffixDataStore(IPublicSuffixConfig config)
+        {
             var fileSystem = new FileSystem();
             _dataSource = new InMemoryPublicSuffixDataSource(config)
             {
