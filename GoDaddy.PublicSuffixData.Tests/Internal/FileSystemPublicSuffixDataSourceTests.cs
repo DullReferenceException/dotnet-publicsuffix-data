@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -94,6 +95,36 @@ namespace GoDaddy.PublicSuffixData.Tests.Internal
             // Wait for cache to be asynchronously written
             await Task.Delay(100);
             Mocked<IFileSystem>().Verify(fs => fs.OpenWrite(_cacheFilePath));
+        }
+
+        [TestMethod]
+        public async Task FileSystemPublicSuffixDataSource_GetDataAsync_WhenDiskDataIsStaleAndUpstreamRaisesError_RaisesDataRefreshErrorEvent()
+        {
+            Mocked<IFileSystem>()
+                .Setup(fs => fs.Exists(_cacheFilePath))
+                .Returns(true);
+            Mocked<IFileSystem>()
+                .Setup(fs => fs.GetLastWriteTime(_cacheFilePath))
+                .Returns(DateTime.Now.AddDays(-11));
+            Mocked<IFileSystem>()
+                .Setup(fs => fs.OpenRead(_cacheFilePath))
+                .Returns(new MemoryStream(Encoding.UTF8.GetBytes("{ \"com\": { } }")));
+
+            var upstreamSource = new Mock<IPublicSuffixDataSource>();
+            var upstreamError = new WebException("Internal error!");
+            upstreamSource.Setup(s => s.GetDataAsync()).Throws(upstreamError);
+            Subject.Upstream = upstreamSource.Object;
+
+            Exception refreshError = null;
+            Subject.DataRefreshError += (s, e) =>
+            {
+                refreshError = e.Exception;
+            };
+            await Subject.GetDataAsync();
+
+            // Wait for upstream to be asynchronously called
+            await Task.Delay(100);
+            refreshError.Should().Be(upstreamError);
         }
 
         [TestMethod]
@@ -219,14 +250,15 @@ namespace GoDaddy.PublicSuffixData.Tests.Internal
         }
 
         [TestMethod]
-        public async Task FileSystemPublicSuffixDataSource_GetDataAsync_IgnoresErrorsCachingUpstreamData()
+        public async Task FileSystemPublicSuffixDataSource_GetDataAsync_RaisesAnEventWhenReceivingErrorCachingUpstreamData()
         {
+            var ioException = new IOException();
             Mocked<IFileSystem>()
                 .Setup(fs => fs.Exists(_cacheFilePath))
                 .Returns(false);
             Mocked<IFileSystem>()
                 .Setup(fs => fs.OpenWrite(_cacheFilePath))
-                .Throws(new IOException());
+                .Throws(ioException);
 
             var latestData = new DomainSegmentTree
             {
@@ -236,11 +268,18 @@ namespace GoDaddy.PublicSuffixData.Tests.Internal
                     new DomainSegmentNode {Segment = "net"}
                 }
             };
+
             var upstreamSource = new Mock<IPublicSuffixDataSource>();
             upstreamSource.Setup(s => s.GetDataAsync()).Returns(Task.FromResult(latestData));
+
+            Exception cacheException = null;
+            Subject.CacheError += (s, e) => cacheException = e.Exception;
             Subject.Upstream = upstreamSource.Object;
 
             await Subject.GetDataAsync();
+            await Task.Delay(100);
+
+            cacheException.Should().Be(ioException);
         }
     }
 }

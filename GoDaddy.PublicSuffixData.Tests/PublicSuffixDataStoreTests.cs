@@ -1,4 +1,5 @@
-﻿using AutoMoq.Helpers;
+﻿using System;
+using AutoMoq.Helpers;
 using FluentAssertions;
 using GoDaddy.PublicSuffixData.Internal;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -96,6 +97,22 @@ namespace GoDaddy.PublicSuffixData.Tests
 
             tld = await Subject.GetTldAsync("foo.bar.www.ck");
             tld.Should().Be("ck");
+        }
+
+        [TestMethod]
+        public void PublicSuffixDataStore_CacheError_RaisesEventsWhenDataSourceHasCacheError()
+        {
+            var error = new Exception("Something failed!");
+            
+            var gotEvent = false;
+            Subject.CacheError += (s, e) =>
+            {
+                e.Exception.Should().Be(error);
+                gotEvent = true;
+            };
+            Mocked<IPublicSuffixDataSource>().Raise(s => s.CacheError += null, new PublicSuffixErrorEventArgs(error));
+            
+            gotEvent.Should().BeTrue();
         }
     }
 }

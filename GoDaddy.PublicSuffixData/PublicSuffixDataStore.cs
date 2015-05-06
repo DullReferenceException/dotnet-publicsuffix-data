@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
 using System.Threading.Tasks;
@@ -8,7 +9,7 @@ namespace GoDaddy.PublicSuffixData
 {
     public class PublicSuffixDataStore
     {
-        private readonly IPublicSuffixDataSource _dataSource;
+        private IPublicSuffixDataSource _dataSource;
 
         public PublicSuffixDataStore() : this(
             ConfigurationManager.GetSection("goDaddy.publicSuffixData") as IPublicSuffixConfig 
@@ -19,19 +20,22 @@ namespace GoDaddy.PublicSuffixData
         public PublicSuffixDataStore(IPublicSuffixConfig config)
         {
             var fileSystem = new FileSystem();
-            _dataSource = new InMemoryPublicSuffixDataSource(config)
+            var dataSource = new InMemoryPublicSuffixDataSource(config)
             {
                 Upstream = new FileSystemPublicSuffixDataSource(config, fileSystem)
                 {
                     Upstream = new InternetPublicSuffixDataSource(config, new HttpClientFactory())
                 }
             };
+            SetDataSource(dataSource);
         }
 
         internal PublicSuffixDataStore(IPublicSuffixDataSource dataSource)
         {
-            _dataSource = dataSource;
+            SetDataSource(dataSource);
         }
+
+        public event EventHandler<PublicSuffixErrorEventArgs> CacheError = delegate { };
 
         public async Task<string> GetTldAsync(string domainName)
         {
@@ -60,6 +64,12 @@ namespace GoDaddy.PublicSuffixData
                     break;
                 }
             }
+        }
+
+        private void SetDataSource(IPublicSuffixDataSource dataSource)
+        {
+            _dataSource = dataSource;
+            _dataSource.CacheError += (s, e) => CacheError(this, e);
         }
     }
 }

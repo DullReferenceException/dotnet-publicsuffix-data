@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Threading.Tasks;
 using FluentAssertions;
 using GoDaddy.PublicSuffixData.Internal;
@@ -43,11 +44,46 @@ namespace GoDaddy.PublicSuffixData.Tests.Internal
             Mocked<IPublicSuffixDataSource>()
                 .Setup(s => s.GetDataAsync())
                 .Returns(Task.FromResult(upstreamData));
+            Subject.Upstream = Mocked<IPublicSuffixDataSource>().Object;
 
             await Subject.GetDataAsync();
             await Subject.GetDataAsync();
 
             Mocked<IPublicSuffixDataSource>().Verify(ds => ds.GetDataAsync(), Times.Once());
+        }
+
+        [TestMethod]
+        public void CacheError_IsRaisedOnUpstreamCacheErrors()
+        {
+            Exception cacheException = null;
+            Subject.Upstream = Mocked<IPublicSuffixDataSource>().Object;
+            Subject.CacheError += (s, e) =>
+            {
+                cacheException = e.Exception;
+            };
+
+            var mockError = new IOException();
+            Mocked<IPublicSuffixDataSource>()
+                .Raise(s => s.CacheError += null, new PublicSuffixErrorEventArgs(mockError));
+
+            cacheException.Should().Be(mockError);
+        }
+
+        [TestMethod]
+        public void DataRefreshError_IsRaisedOnUpstreamDataRefreshErrors()
+        {
+            Exception upstreamException = null;
+            Subject.Upstream = Mocked<IPublicSuffixDataSource>().Object;
+            Subject.DataRefreshError += (s, e) =>
+            {
+                upstreamException = e.Exception;
+            };
+
+            var mockError = new IOException();
+            Mocked<IPublicSuffixDataSource>()
+                .Raise(s => s.DataRefreshError += null, new PublicSuffixErrorEventArgs(mockError));
+
+            upstreamException.Should().Be(mockError);
         }
 
         private InMemoryPublicSuffixDataSource _subject;

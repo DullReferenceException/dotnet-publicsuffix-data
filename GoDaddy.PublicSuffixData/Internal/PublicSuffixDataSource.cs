@@ -6,26 +6,60 @@ namespace GoDaddy.PublicSuffixData.Internal
     internal abstract class PublicSuffixDataSource : IPublicSuffixDataSource
     {
         private readonly IPublicSuffixConfig _config;
+        private IPublicSuffixDataSource _upstreamDataSource;
 
         protected PublicSuffixDataSource(IPublicSuffixConfig config)
         {
             _config = config;
         }
 
-        public IPublicSuffixDataSource Upstream { get; set; }
+        public IPublicSuffixDataSource Upstream 
+        {
+            get { return _upstreamDataSource; }
+            set
+            {
+                if (_upstreamDataSource != null)
+                {
+                    _upstreamDataSource.CacheError -= HandleUpstreamCacheError;
+                    _upstreamDataSource.DataRefreshError -= HandleDataRefreshError;
+                }
+
+                _upstreamDataSource = value;
+
+                if (_upstreamDataSource != null)
+                {
+                    _upstreamDataSource.CacheError += HandleUpstreamCacheError;
+                    _upstreamDataSource.DataRefreshError += HandleDataRefreshError;
+                }
+            }
+        }
+
+        public event EventHandler<PublicSuffixErrorEventArgs> DataRefreshError = delegate { };
+        public event EventHandler<PublicSuffixErrorEventArgs> CacheError = delegate { };
 
         public async Task<DomainSegmentTree> GetDataAsync()
         {
             var timestamp = GetDataTimestamp();
             if (IsNewerDataNeeded(timestamp))
             {
-                var getLatestData = FetchAndCacheUpstream();
+                var getLatestData = Task.Run(async () => await FetchAndCacheUpstream());
+                
                 if (IsNewerDataRequired(timestamp))
                 {
                     return await getLatestData;
                 }
 
-                getLatestData.ConfigureAwait(false);
+                Task.Run(async () =>
+                {
+                    try
+                    {
+                        await getLatestData;
+                    }
+                    catch (Exception ex)
+                    {
+                        DataRefreshError(this, new PublicSuffixErrorEventArgs(ex));
+                    }
+                }).ConfigureAwait(false);
             }
 
             try
@@ -51,7 +85,19 @@ namespace GoDaddy.PublicSuffixData.Internal
                 .ContinueWith(t =>
                 {
                     var newData = t.Result;
-                    CacheUpstreamDataAsync(newData).ConfigureAwait(false);
+
+                    Task.Run(async () => 
+                    {
+                        try
+                        {
+                            await CacheUpstreamDataAsync(newData);
+                        }
+                        catch (Exception ex)
+                        {
+                            CacheError(this, new PublicSuffixErrorEventArgs(ex));
+                        }
+                    }).ConfigureAwait(false);
+
                     return newData;
                 });
         }
@@ -69,6 +115,16 @@ namespace GoDaddy.PublicSuffixData.Internal
         private static bool TimeHasElapsed(TimeSpan span, DateTime? timestamp)
         {
             return !timestamp.HasValue || (DateTime.Now - timestamp.Value) > span;
+        }
+
+        private void HandleUpstreamCacheError(object sender, PublicSuffixErrorEventArgs e)
+        {
+            CacheError(this, e);
+        }
+
+        private void HandleDataRefreshError(object sender, PublicSuffixErrorEventArgs e)
+        {
+            DataRefreshError(this, e);
         }
 
         protected abstract DateTime? GetDataTimestamp();
