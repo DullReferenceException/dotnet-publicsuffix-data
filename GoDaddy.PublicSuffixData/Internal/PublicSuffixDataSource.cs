@@ -24,6 +24,8 @@ namespace GoDaddy.PublicSuffixData.Internal
                 {
                     return await getLatestData;
                 }
+
+                getLatestData.ConfigureAwait(false);
             }
 
             try
@@ -49,7 +51,7 @@ namespace GoDaddy.PublicSuffixData.Internal
                 .ContinueWith(t =>
                 {
                     var newData = t.Result;
-                    CacheUpstreamDataAsync(newData);
+                    CacheUpstreamDataAsync(newData).ConfigureAwait(false);
                     return newData;
                 });
         }
