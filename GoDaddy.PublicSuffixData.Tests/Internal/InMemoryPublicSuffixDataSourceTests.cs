@@ -47,6 +47,8 @@ namespace GoDaddy.PublicSuffixData.Tests.Internal
             Subject.Upstream = Mocked<IPublicSuffixDataSource>().Object;
 
             await Subject.GetDataAsync();
+            await Task.Delay(100);
+
             await Subject.GetDataAsync();
 
             Mocked<IPublicSuffixDataSource>().Verify(ds => ds.GetDataAsync(), Times.Once());

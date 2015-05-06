@@ -36,6 +36,7 @@ namespace GoDaddy.PublicSuffixData
         }
 
         public event EventHandler<PublicSuffixErrorEventArgs> CacheError = delegate { };
+        public event EventHandler<PublicSuffixErrorEventArgs> DataRefreshError = delegate { };
 
         public async Task<string> GetTldAsync(string domainName)
         {
@@ -70,6 +71,7 @@ namespace GoDaddy.PublicSuffixData
         {
             _dataSource = dataSource;
             _dataSource.CacheError += (s, e) => CacheError(this, e);
+            _dataSource.DataRefreshError += (s, e) => DataRefreshError(this, e);
         }
     }
 }

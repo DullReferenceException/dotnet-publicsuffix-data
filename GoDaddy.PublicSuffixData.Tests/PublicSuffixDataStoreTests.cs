@@ -114,5 +114,21 @@ namespace GoDaddy.PublicSuffixData.Tests
             
             gotEvent.Should().BeTrue();
         }
+
+        [TestMethod]
+        public void PublicSuffixDataStore_CacheError_RaisesEventsWhenDataSourceHasDataRefreshError()
+        {
+            var error = new Exception("Something failed!");
+
+            var gotEvent = false;
+            Subject.DataRefreshError += (s, e) =>
+            {
+                e.Exception.Should().Be(error);
+                gotEvent = true;
+            };
+            Mocked<IPublicSuffixDataSource>().Raise(s => s.DataRefreshError += null, new PublicSuffixErrorEventArgs(error));
+
+            gotEvent.Should().BeTrue();
+        }
     }
 }
