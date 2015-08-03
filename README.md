@@ -7,8 +7,17 @@ you can directly register names. For example, `.org`, `.com`, and `.uk` are top-
 register an `example.org`, `example.com`, or `example.uk` domain. However, `.co.uk`, despite consisting of
 two tokens, is also a top-level domain, so you cannot register `co.uk` as a domain.
 
-This is a .NET port of https://github.secureserver.net/PC/node-publicsuffix-data
+This is a .NET port of https://github.com/DullReferenceException/node-publicsuffix-data
 
+
+## Installing
+
+To install GoDaddy.PublicSuffixData, run the following command in the 
+[Package Manager Console](http://docs.nuget.org/docs/start-here/using-the-package-manager-console)
+
+```
+PM> Install-Package GoDaddy.PublicSuffixData
+```
 
 ## Simple Usage
 
