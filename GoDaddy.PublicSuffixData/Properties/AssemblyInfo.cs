@@ -8,9 +8,9 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("GoDaddy.PublicSuffixData")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("GoDaddy.com, LLC")]
+[assembly: AssemblyCompany("GoDaddy")]
 [assembly: AssemblyProduct("GoDaddy.PublicSuffixData")]
-[assembly: AssemblyCopyright("Copyright © GoDaddy.com, LLC 2015")]
+[assembly: AssemblyCopyright("Copyright © GoDaddy 2015")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
