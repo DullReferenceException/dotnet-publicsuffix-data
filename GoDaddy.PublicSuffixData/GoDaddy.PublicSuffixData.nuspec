@@ -6,7 +6,7 @@
     <title>$title$</title>
     <authors>$author$</authors>
     <owners>$author$</owners>
-    <projectUrl>https://github.secureserver.net/PC/dotnet-publicsuffix-data</projectUrl>
+    <projectUrl>https://github.com/DullReferenceException/dotnet-publicsuffix-data</projectUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>.NET interface to the top-level domains located at https://publicsuffix.org.</description>
     <releaseNotes>Initial release</releaseNotes>
